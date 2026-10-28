@@ -1,0 +1,8 @@
+{
+  "name": "toastal-express",
+  "version": "0.1.0",
+  "private": true,
+  "description": "토스트에 편지를 써서 5자리 ID로 보내는 웹사이트",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" }
+}

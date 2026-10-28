@@ -1,0 +1,15 @@
+# Render.com 설정 (선택). GitHub 저장소를 연결하면 이 파일대로 서버가 만들어져요.
+services:
+  - type: web
+    name: toastal-express
+    runtime: node
+    plan: starter          # 영구 디스크는 유료 플랜에서만 쓸 수 있어요
+    buildCommand: "true"
+    startCommand: node server.js
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: DATA_DIR
+        value: /data

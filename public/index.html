@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Toastal Express</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Ultra&display=swap" rel="stylesheet">
+<!-- 폰트는 이미 가지고 계신 걸로 바꾸세요. style.css 맨 위 :root 의 --font-* 변수만 고치면 됩니다. -->
+<link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Anton&family=Black+Han+Sans&family=Gochi+Hand&family=Jua&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="preload" as="image" href="assets/image/bread.png">
+<link rel="preload" as="image" href="assets/image/bread-baked.png">
+<link rel="preload" as="image" href="assets/image/toaster.png">
+<link rel="preload" as="image" href="assets/image/toasterup.png">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body data-screen="cover">
+
+<!-- 케첩 질감 SVG 필터 (첨부해 주신 ketchup.html 그대로) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="goo" x="-10%" y="-10%" width="120%" height="120%">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="2.2" result="blur"/>
+    <feSpecularLighting in="blur" surfaceScale="6" specularConstant="1.1" specularExponent="28" lighting-color="#ffffff" result="spec">
+      <fePointLight x="-60" y="-120" z="220"/>
+    </feSpecularLighting>
+    <feComposite in="spec" in2="SourceAlpha" operator="in" result="specClip"/>
+    <feDiffuseLighting in="blur" surfaceScale="4" diffuseConstant="1" lighting-color="#ff6a6a" result="diffuse">
+      <feDistantLight azimuth="225" elevation="50"/>
+    </feDiffuseLighting>
+    <feComposite in="diffuse" in2="SourceAlpha" operator="in" result="diffClip"/>
+    <feBlend in="SourceGraphic" in2="diffClip" mode="multiply" result="shaded"/>
+    <feComposite in="shaded" in2="specClip" operator="arithmetic" k1="0" k2="1" k3="1" k4="0"/>
+  </filter>
+</svg>
+
+<header id="top">
+  <a id="logo" href="#" aria-label="처음으로">Toastal<br>Express</a>
+  <button id="userBtn" aria-label="내 정보"><i></i><b id="badge" hidden>0</b></button>
+</header>
+
+<aside id="idcard" hidden>
+  <div class="id">ID : <span id="myId">·····</span></div>
+  <div class="nick">
+    <input id="nickIn" maxlength="12" placeholder="닉네임 (최대 12자)" autocomplete="off">
+    <button id="nickSave">저장</button>
+  </div>
+  <hr>
+  <button data-box="received">Received <em id="cntNew" hidden></em></button>
+  <button data-box="sent">Sent</button>
+  <button data-box="all">History</button>
+  <button id="friendsOpen">Friends</button>
+</aside>
+
+<!-- 장면: 토스터(뒤) → 토스트 → 토스터(앞). 표지 → 버터 → 쓰기로 이어지면서 움직여요 -->
+<div id="scene" data-step="cover">
+  <img class="rig-back toaster-layer" src="assets/image/toaster.png" alt="">
+  <div id="writeToast"></div>
+  <img class="rig-front toaster-layer" src="assets/image/toasterup.png" alt="">
+</div>
+
+<main>
+
+  <!-- 1. 표지 -->
+  <section id="cover" class="screen active">
+    <p class="cover-sub">토스트로 간단하게<br>보내고 싶은 사람에게 마음을 전해봐염~ㅋㅋ</p>
+    <div class="knobs">
+      <div><span class="led red"></span><button class="knob" id="howBtn">사용법</button></div>
+      <div><span class="led green"></span><button class="knob" id="startBtn">시작</button></div>
+    </div>
+  </section>
+
+  <!-- 1-2. 버터 고르기 -->
+  <section id="pick" class="screen">
+    <div class="pick-box">
+      <button class="butter-pick" id="butterBtn" aria-pressed="false">
+        <img src="assets/image/butter.png" alt="버터">
+      </button>
+      <button class="butter-pick cheese-pick" id="cheeseBtn">
+        <img src="assets/image/cheese-2.png" alt="치즈">
+      </button>
+    </div>
+    <button class="obtn side" id="nextBtn">Next</button>
+  </section>
+
+  <!-- 2~4. 쓰기 / 굽기 / 튕겨나가기 -->
+  <section id="write" class="screen">
+    <aside class="panel" id="panel">
+      <h3>제목 꾸미기</h3>
+      <input id="titleIn" maxlength="10" autocomplete="off" aria-label="제목">
+      <div class="chips">
+        <button class="chip on" data-style="ketchup">Ketchup</button>
+        <button class="chip" data-style="jam">Jam</button>
+      </div>
+      <div class="chips">
+        <button class="chip" id="butterChip">Butter</button>
+        <button class="chip" id="cheeseChip">Cheese</button>
+      </div>
+      <div class="chips shuf">
+        <button class="chip" id="shuffle" hidden>Shuffle</button>
+      </div>
+      <button class="knob" id="bakeBtn">굽기</button>
+    </aside>
+  </section>
+
+  <!-- 5. 완성본 + 봉투 선택 -->
+  <section id="done" class="screen">
+    <button class="back" id="editBtn">Edit</button>
+    <div class="done-toast" id="doneToast"></div>
+    <div class="bags" id="bags">
+      <p>봉투를 눌러 보내기</p>
+    </div>
+  </section>
+
+  <!-- 6. 전송 완료 -->
+  <section id="sent" class="screen">
+    <div class="bag-lg" id="sentBag"><img alt="봉투"></div>
+    <p class="sent-msg">성공적으로 토스트를 보냈어요!</p>
+    <div class="btns">
+      <button class="oval" id="shareBtn"><span>Share</span></button>
+      <button class="oval" id="rebakeBtn"><span>Rebake</span></button>
+    </div>
+  </section>
+
+  <!-- 보관함 -->
+  <section id="box" class="screen">
+    <div class="tabs" id="tabs">
+      <button data-box="received">Received</button>
+      <button data-box="sent">Sent</button>
+      <button data-box="all">History</button>
+    </div>
+    <ul class="list" id="list"></ul>
+  </section>
+
+  <!-- 친구 -->
+  <section id="friends" class="screen">
+    <button class="back" id="friendsBack">Back</button>
+    <div class="fwin">
+      <h3>친구 찾기</h3>
+      <div class="chips">
+        <button class="chip on" data-fmode="nick">Nickname</button>
+        <button class="chip" data-fmode="id">ID</button>
+      </div>
+      <form class="fsearch" id="fform">
+        <input id="fq" maxlength="12" autocomplete="off" aria-label="검색어">
+        <button class="obtn" id="fgo" type="submit">Search</button>
+      </form>
+      <ul class="flist" id="fresults"></ul>
+      <h3>내 친구</h3>
+      <ul class="flist" id="fmine"></ul>
+    </div>
+  </section>
+
+  <!-- 보관함에서 토스트 열어보기 -->
+  <section id="view" class="screen">
+    <button class="back" id="viewBack">Back</button>
+    <div class="done-toast" id="viewToast"></div>
+  </section>
+
+</main>
+
+<div id="modal" hidden>
+  <div class="modal-card">
+    <h3>사용법</h3>
+    <ol>
+      <li><b>시작</b>을 누르면 버터가 나와요. 눌러서 식빵에 <b>버터</b>와 <b>치즈</b>를 올리고 <b>Next</b>를 눌러요.</li>
+      <li>제목은 <b>케첩</b>이나 <b>잼</b> 질감으로 짧게, 본문은 식빵에 직접 써요.</li>
+      <li>받는 사람의 <b>5자리 ID</b>를 <b>to.</b> 에 적어요. (내 ID는 오른쪽 위 아이콘)</li>
+      <li><b>굽기</b>를 누르면 글씨가 진해지고 토스트가 튕겨 나가요.</li>
+      <li>완성본을 확인하고 <b>봉투</b>를 누르면 전송!</li>
+    </ol>
+    <button class="mini" id="modalClose">Close</button>
+  </div>
+</div>
+<div id="snack" role="status"></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
